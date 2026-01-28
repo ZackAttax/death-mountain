@@ -20,6 +20,7 @@ import { Account, RpcProvider } from "starknet";
 import { useDynamicConnector } from "./starknet";
 import { delay, stringToFelt } from "@/utils/utils";
 import { useDungeon } from "@/dojo/useDungeon";
+import { setDeepLinkCallback } from "@/native/deeplinks";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 
@@ -143,7 +144,57 @@ export const ControllerProvider = ({ children }: PropsWithChildren) => {
     if (connector) getUsername();
   }, [connector]);
 
-  // App resume handler for session retrieval after browser authentication
+  // Deep link handler: session is in the URL (startapp=), so we must process it when the deep link is received, not on resume
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    setDeepLinkCallback(async (url: string) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7247/ingest/a7e82f58-654e-43f0-92f1-ed913cdf8b58',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'controller.tsx:deepLinkCallback',message:'Deep link callback with URL',data:{hasConnectionPromise:!!connectionPromise,urlLength:url?.length,hasStartapp:url?.includes('startapp')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
+
+      if (!connectionPromise) return;
+
+      const sessionConnector = connectors.find(
+        (conn) => conn.id === "controller_session" || conn.id?.includes("session")
+      );
+      if (!sessionConnector) return;
+
+      const sessionConnectorAny = sessionConnector as any;
+      if (!sessionConnectorAny.controller) return;
+
+      sessionConnectorAny.controller.reopenBrowser = false;
+
+      try {
+        // Pass the deep link URL so the controller can parse startapp= and establish the session
+        if (typeof sessionConnectorAny.controller.tryRetrieveFromQueryOrStorage === 'function') {
+          await sessionConnectorAny.controller.tryRetrieveFromQueryOrStorage(url);
+        }
+        await delay(200);
+        const account = await sessionConnectorAny.controller.connect();
+        // #region agent log
+        fetch('http://127.0.0.1:7247/ingest/a7e82f58-654e-43f0-92f1-ed913cdf8b58',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'controller.tsx:deepLinkCallback',message:'Session from deep link URL',data:{hasAccount:!!account,address:(account as any)?.address},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+        // #endregion
+        connectionPromise.resolve(account);
+        setConnectionPromise(null);
+        connect({ connector: sessionConnector });
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7247/ingest/a7e82f58-654e-43f0-92f1-ed913cdf8b58',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'controller.tsx:deepLinkCallback',message:'Deep link callback error',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+        // #endregion
+        connectionPromise.reject(error);
+        setConnectionPromise(null);
+      }
+    });
+
+    return () => {
+      setDeepLinkCallback(() => {});
+    };
+  }, [connectors, connectionPromise, connect]);
+
+  // App resume handler for session retrieval after browser authentication (fallback if deep link fires late)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
       return;
