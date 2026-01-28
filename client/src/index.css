@@ -11,6 +11,9 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  /* Improve touch handling for iOS webviews */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 a {
@@ -201,4 +204,11 @@ input:-webkit-autofill {
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 100%);
+}
+
+/* Ensure buttons and clickable elements work properly in iOS webviews */
+button, a, [role="button"], [onclick] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }

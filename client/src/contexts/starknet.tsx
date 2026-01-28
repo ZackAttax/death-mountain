@@ -3,8 +3,7 @@ import {
   getNetworkConfig,
   NetworkConfig,
 } from "@/utils/networkConfig";
-import { stringToFelt } from "@/utils/utils";
-import ControllerConnector from "@cartridge/connector/controller";
+import { makeCartridgeConnector } from "@/wallet/makeCartridgeConnector";
 import { mainnet } from "@starknet-react/chains";
 import { jsonRpcProvider, StarknetConfig, voyager } from "@starknet-react/core";
 import {
@@ -25,17 +24,7 @@ const DynamicConnectorContext = createContext<DynamicConnectorContext | null>(
 );
 
 const controllerConfig = getNetworkConfig(ChainId.SN_MAIN);
-const cartridgeController =
-  typeof window !== "undefined"
-    ? new ControllerConnector({
-      policies: controllerConfig.policies,
-      namespace: controllerConfig.namespace,
-      slot: controllerConfig.slot,
-      preset: controllerConfig.preset,
-      chains: controllerConfig.chains,
-      defaultChainId: stringToFelt(controllerConfig.chainId).toString(),
-    })
-    : null;
+const cartridgeController = makeCartridgeConnector();
 
 export function DynamicConnectorProvider({ children }: PropsWithChildren) {
   const [currentNetworkConfig, setCurrentNetworkConfig] =

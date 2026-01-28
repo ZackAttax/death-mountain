@@ -8,9 +8,20 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "mobile:build": "pnpm build && npx cap copy",
+    "mobile:sync": "pnpm build && npx cap sync",
+    "mobile:ios": "pnpm run mobile:sync && npx cap run ios",
+    "mobile:android": "pnpm run mobile:sync && npx cap run android",
+    "mobile:ios:open": "pnpm run mobile:build && npx cap open ios",
+    "mobile:android:open": "pnpm run mobile:build && npx cap open android",
+    "mobile:ios:dev": "npx cap sync && npx cap open ios",
+    "mobile:ios:live": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
     "@cartridge/connector": "^0.10.1",
     "@cartridge/controller": "^0.10.1",
     "@cloudflare/stream-react": "^1.9.3",
@@ -53,6 +64,9 @@
     "vite-plugin-wasm": "^3.4.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
     "@eslint/js": "^9.36.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

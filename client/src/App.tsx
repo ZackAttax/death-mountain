@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import { StyledEngineProvider, ThemeProvider } from '@mui/material/styles';
 import { SnackbarProvider } from 'notistack';
 import { BrowserRouter, Route, Routes, } from "react-router-dom";
+import { Capacitor } from '@capacitor/core';
 
 import { ControllerProvider, useController } from '@/contexts/controller';
 import { SoundProvider } from '@/desktop/contexts/Sound';
@@ -22,7 +23,11 @@ import TermsOfServiceScreen from '@/mobile/containers/TermsOfServiceScreen';
 function AppContent() {
   const { useMobileClient } = useUIStore();
   const { showTermsOfService, acceptTermsOfService } = useController();
-  const shouldShowMobile = isMobile || (isBrowser && useMobileClient);
+  
+  // Force mobile UI on native platforms (iOS/Android)
+  // react-device-detect may not work correctly in Capacitor webviews
+  const isNativePlatform = Capacitor.isNativePlatform();
+  const shouldShowMobile = isNativePlatform || isMobile || (isBrowser && useMobileClient);
 
   return (
     <>

@@ -15,6 +15,8 @@ import { useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import "./index.css";
 import { PostHogProvider } from "posthog-js/react";
+import { initializeDeepLinks } from "@/native/deeplinks";
+import { Capacitor } from '@capacitor/core';
 
 const options = {
   api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
@@ -65,17 +67,36 @@ function DojoApp() {
 }
 
 async function main() {
-  createRoot(document.getElementById("root")!).render(
-    <PostHogProvider
-      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-      options={options}
-    >
-      <DynamicConnectorProvider>
-        <Analytics />
-        <DojoApp />
-      </DynamicConnectorProvider>
-    </PostHogProvider>
-  );
+  try {
+    // Log platform info for debugging
+    if (Capacitor.isNativePlatform()) {
+      console.log('Running on native platform:', Capacitor.getPlatform());
+    }
+
+    // Initialize deep link handling for native platforms
+    initializeDeepLinks();
+
+    const rootElement = document.getElementById("root");
+    if (!rootElement) {
+      throw new Error("Root element not found");
+    }
+
+    createRoot(rootElement).render(
+      <PostHogProvider
+        apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+        options={options}
+      >
+        <DynamicConnectorProvider>
+          <Analytics />
+          <DojoApp />
+        </DynamicConnectorProvider>
+      </PostHogProvider>
+    );
+  } catch (error) {
+    console.error("Failed to initialize the application:", error);
+    // Re-throw to ensure errors are visible
+    throw error;
+  }
 }
 
 main().catch((error) => {

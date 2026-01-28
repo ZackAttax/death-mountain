@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
@@ -55,6 +55,134 @@
     twq('config','qbo32');
     </script>
     <!-- End Twitter conversion tracking base code -->
+
+    <!-- Capacitor Browser window.open patching for native platforms -->
+    <script>
+      (function() {
+        // Check if we're on a native platform - prefer Capacitor check
+        var isNative = (window.Capacitor && 
+                       window.Capacitor.isNativePlatform && 
+                       window.Capacitor.isNativePlatform()) || 
+                      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (!isNative) {
+          return; // Don't patch on web
+        }
+
+        // Function to get Browser plugin - tries multiple access patterns
+        function getBrowser() {
+          // Try window.CapacitorBrowser (exposed by deeplinks.ts)
+          if (window.CapacitorBrowser) {
+            return window.CapacitorBrowser;
+          }
+          // Try Capacitor.Plugins.Browser (Capacitor 3+)
+          if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+            return window.Capacitor.Plugins.Browser;
+          }
+          // Try window.Browser (if exposed globally)
+          if (window.Browser) {
+            return window.Browser;
+          }
+          // Try accessing through Capacitor's plugin registry
+          if (window.Capacitor && window.Capacitor.getPlugin) {
+            try {
+              return window.Capacitor.getPlugin('Browser');
+            } catch (e) {
+              // Plugin not available yet
+            }
+          }
+          return null;
+        }
+
+        // Store original window.open
+        window._originalOpen = window.open;
+
+        // Function to open external URLs using Capacitor Browser
+        function openExternal(url) {
+          if (!url) return;
+          
+          var s = String(url);
+          
+          // Handle protocol-relative URLs
+          if (s.startsWith('//')) {
+            s = 'https:' + s;
+          }
+          
+          // Only handle http(s) URLs
+          if (/^https?:\/\//i.test(s)) {
+            var Browser = getBrowser();
+            
+            if (Browser && Browser.open) {
+              Browser.open({ url: s }).catch(function(err) {
+                console.error('Failed to open browser:', err);
+                // Fallback to default window.open if Browser fails
+                if (window._originalOpen) {
+                  window._originalOpen(s, '_blank');
+                }
+              });
+            } else {
+              // Browser not available yet, use fallback
+              if (window._originalOpen) {
+                window._originalOpen(s, '_blank');
+              }
+            }
+          } else {
+            // For non-HTTP(S) URLs (mailto:, tel:, etc.), use default behavior
+            if (window._originalOpen) {
+              window._originalOpen(url, '_blank');
+            }
+          }
+        }
+
+        // Patch window.open
+        window.open = function(url, target, features) {
+          openExternal(url);
+          
+          // Return a fake WindowProxy for compatibility
+          var proxy = {
+            closed: false,
+            close: function() {
+              try {
+                var Browser = getBrowser();
+                if (Browser && Browser.close) {
+                  Browser.close().catch(function() {});
+                }
+              } catch (e) {
+                // Ignore errors
+              }
+            },
+            focus: function() {},
+            location: {
+              href: String(url || '')
+            }
+          };
+          return /** @type {any} */ (proxy);
+        };
+
+        // Optional: Handle anchor tag clicks (if you need this)
+        // Uncomment if you want <a target="_blank"> to use in-app browser
+        /*
+        function handleClick(e) {
+          try {
+            var a = e.target.closest && e.target.closest('a[href]');
+            if (!a) return;
+            
+            var href = a.href;
+            var target = a.target;
+            var isExternal = /^https?:\/\//i.test(href) && !href.includes(location.host);
+            
+            if (target === '_blank' || isExternal) {
+              e.preventDefault();
+              openExternal(href);
+            }
+          } catch {}
+        }
+        
+        document.addEventListener('click', handleClick, true);
+        document.addEventListener('auxclick', handleClick, true);
+        */
+      })();
+    </script>
   </head>
 
   <body>
