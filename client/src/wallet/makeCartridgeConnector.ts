@@ -35,7 +35,7 @@ export function makeCartridgeConnector() {
   const sessionConnector = new SessionConnector({
     policies: controllerConfig.policies,
     rpc: controllerConfig.rpcUrl,
-    chainId: 'SN_MAINNET',
+    chainId: 'SN_MAIN',
     redirectUrl: redirectUrl,
     disconnectRedirectUrl: redirectUrl,
     signupOptions: ["google", "discord", "webauthn", "password"],
